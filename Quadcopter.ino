@@ -1,4 +1,8 @@
 
+int errorState = 0; 
+int desired[] = {0, 0, 0, 0};
+
+#include <Structs.h>
 #include <Servo.h>
 #include <Sensors.h>
 #include <Motors.h>
@@ -8,13 +12,18 @@
 Sensors sensors; 
 Motors motors; 
 Comms comms; 
+RX rx; 
 
 int acc = 0; 
 
 // ROLL PITCH YAW THROTTLE
-int desired[4] = { 0, 0, 0, 0 }; 
 
 // Time Structure -----------------------------------------
+
+#define LED_PIN 13
+boolean ledState = false;
+long flashRate = 1000L; 
+
     
 float DT = 0.0f;
 
@@ -24,14 +33,18 @@ struct time {
   unsigned long previousMicros;
   unsigned long previous;
   unsigned long tx;
+  unsigned long tick;
 }
-time = {0L, 0L, 0L, 0L, 0L}; 
+time = {0L, 0L, 0L, 0L, 0L, 0L}; 
 
 void setup() {
+	errorState=0;
     sensors.init(); 
     motors.init(); 
 	Serial.begin(38400); 
 	Serial.println("Start"); 
+
+	pinMode(LED_PIN,OUTPUT);
 }
 
 void loop() {
@@ -54,20 +67,44 @@ void loop() {
 	// updateRX(); 
 
 	sensors.read(DT, desired);
-	motors.update( sensors.c, desired[THROTTLE] ); 
+	motors.update( sensors.c, desired[THROTTLE], errorState ); 
 	//sensors.print(); 
 
-	if( time.current > ( 50 + time.tx )) {
-		comms.sendPacket(sensors.c, sensors.a, sensors.g, motors.d, desired);
-		//sendAll(); 
-		time.tx = time.current; 
+	if( time.current > ( flashRate + time.tick )) {
+		toggleLED();
+		motors.print(); 
+		time.tick = time.current; 
 	}
 
-	//updateRX();
+	if( time.current > ( 50L + time.tx )) {
+		//comms.sendPacket(sensors.c, sensors.a, sensors.g, motors.d, desired);
+
+		switch(errorState){
+			case NOERR:
+				if( !rx.updateRX( desired ) ) {
+					flashRate = 250L;
+					errorState = RXERR; 
+				}
+				break;
+			case RXERR:
+				if( rx.updateRX( desired ) ){
+					flashRate = 1000L;
+					errorState = NOERR; 
+				}
+				break;
+			default:
+				Serial.println("Error missed"); 
+		}
+		//sendAll(); 
+		time.tx = time.current; 
+
+	}
+
 	checkSerial();
 }
 
 /*
+
 P - KP 0-1000 > 0. - 1.
 I - KI 0-1000 > 0. - 1.
 D - KD 0-1000 > 0. - 1.
@@ -150,6 +187,11 @@ void sendAll(){
 	comms.send( sensors.a );
 	comms.send( sensors.g );
 	comms.send( motors.d );
-	// comms.send <<DESIRED>>
+	comms.send( desired );
+}
+
+void toggleLED(){
+	digitalWrite(LED_PIN,ledState);
+	ledState = !ledState; 
 }
 

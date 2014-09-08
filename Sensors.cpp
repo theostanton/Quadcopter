@@ -22,6 +22,7 @@ LSM303 compass;
 #define CTRL_REG4 0x23
 #define CTRL_REG5 0x24
 
+
 Sensors::Sensors(){
     Wire.begin();
 

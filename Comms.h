@@ -9,6 +9,7 @@ class Comms {
 	public:
 		Comms();
 		void init(); 
+		void send(int *desired); 
 		void send(Ctrl ctrl); 
 		void send(Accel accel); 
 		void send(Gyro gyro); 

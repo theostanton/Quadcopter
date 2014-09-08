@@ -14,6 +14,7 @@
 #define MOTOR_D_PIN 5
 
 
+
 Motors::Motors(){
 	pins[A] = MOTOR_A_PIN; 
 	pins[B] = MOTOR_B_PIN; 
@@ -24,7 +25,7 @@ Motors::Motors(){
 		correction[i] = 0.0f; 
 	}
 
-	KP = 0.08f;
+	KP = 0.58f;
   	KI = 0.00f;
  	KD = -0.08f;
 
@@ -39,6 +40,7 @@ Motors::Motors(){
 void Motors::init(){
 	Serial.print("Motors init ...");
 	for(int i=0; i<4; i++){
+		pinMode(pins[i],OUTPUT); 
 		servos[i].attach( pins[i] );
 		servos[i].write( 10 );  
 	}
@@ -62,7 +64,7 @@ void Motors::init(){
 	// Serial.println("Done");
 }
 
-void Motors::update(Ctrl ctrl,int throttle){
+void Motors::update(Ctrl ctrl, int throttle, int errorState){
 
 	KI = 0.0f; 
 	
@@ -86,30 +88,43 @@ void Motors::update(Ctrl ctrl,int throttle){
 	d.d[D] = ( - ctrl.rate[PITCH] 			- ctrl.rate[ROLL] 			) * KD;
 	correction[D] = d.p[D] + d.i[D] + d.d[D]; // + YAW Corr
 
-
-	set(throttle);
-
+	switch(errorState){
+		case NOERR:
+			set(throttle);
+			break;
+		default:
+			kill();
+	}
 }
 
 void Motors::set(int throttle){
-
-	int command[4]; 
+ 
 	
 	for (int i = 0; i < 4; i++) {
-		command[i] = int( correction[i] + 50 ) + throttle;
-		if( command[i] > 179) command[i] = 179;
-		if( command[i] < 1) command[i] = 1;
+		command[i] = int( correction[i] ) + throttle;
+		//if( command[i] > 100) command[i] = 179;
+		//if( command[i] < 100) command[i] = 1;
+		if( command[i] > MOTOR_MAX) command[i] = MOTOR_MAX;
+		if( command[i] < MOTOR_MIN) command[i] = MOTOR_MIN;
 	}
 
 	for(int i=0; i<4; i++){
-		// Serial.print(command[i]);
-		// Serial.print(" ");
 		servos[i].write( command[i] ); 
 	}
-	// Serial.println(); 
 
 }
 
-void Motors::kill(){
+void Motors::print(){
+	for(int i=0; i<4; i++){
+		Serial.print(command[i]);
+		Serial.print(" ");
+	}
+	Serial.println();
+}
 
+void Motors::kill(){
+	for(int i=0; i<4; i++){
+		servos[i].write( 0 ); 
+	}
+	Serial.println("KILL MOTORS"); 
 }

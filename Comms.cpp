@@ -69,6 +69,18 @@ void Comms::sendPacket(Ctrl ctrl, Accel accel, Gyro gyro, Data data, int * desir
 
 }
 
+void Comms::send(int *desired){
+	Serial.print("D,");
+	Serial.print( -desired[ROLL]);
+	Serial.print(",");
+	Serial.print( -desired[PITCH]);
+	Serial.print(",");
+	Serial.print( -desired[YAW]);
+	Serial.println(); 
+
+}
+
+
 void Comms::send(Ctrl ctrl){
 	Serial.print("M,");
 	Serial.print( int( ctrl.angle[ROLL] ) );

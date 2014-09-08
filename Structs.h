@@ -1,6 +1,9 @@
 #ifndef Structs_h
 #define Structs_h
 
+#include "Arduino.h"
+#include "Structs.h"
+
 struct Accel { 
       float raw[3];
       float zero[3]; // no need
@@ -30,6 +33,11 @@ struct Data {
 		float t[4];
 };
 
+#define NOERR 0
+#define RXERR 1
+#define SNSER 2
+#define SRLER 3
+
 #define X 0
 #define Y 1
 #define Z 2
@@ -38,6 +46,11 @@ struct Data {
 #define YAW 2 
 #define THROTTLE 3
 
+#define rxROLL 0
+#define rxTHROTTLE 1
+#define rxPITCH 2
+#define rxYAW 3
+
 #define ROLL_PIN 11 // CIRCUIT
 #define THROTTLE_PIN 4 // CIRCUIT
 #define PITCH_PIN 12 // CIRCUIT 
@@ -45,7 +58,7 @@ struct Data {
 #define AUX1_PIN 7 // CIRCUIT
 #define AUX2_PIN 8 // CIRCUIT
 
-#define MOTOR_MIN 10 // minimum throttle servo command angle
+#define MOTOR_MIN 1 // minimum throttle servo command angle
 #define MOTOR_MAX 179 // max throttle servo angle command
 
 #endif
