@@ -88,13 +88,86 @@ boolean RX::update4CH( int *desired ) {
     desired[THROTTLE] = rxdesired[rxTHROTTLE];
     desired[PITCH] = rxdesired[rxPITCH];
     desired[YAW] = rxdesired[rxYAW];
+
+    return true; }
+
+boolean RX::update6CH( int *desired ) {
+
+
+    long start = micros(); 
+    while( digitalRead( PIN[0] ) == LOW ){
+        if( micros() - start > 20000L ){
+            return false; 
+        }
+    }
+    RXnode[0] = micros();
+    //Serial.println(RXnode[0]);
+
+    while( digitalRead( PIN[2] ) == LOW ){
+    }
+    RXnode[1] = micros();
+    //Serial.println(RXnode[1]);
+
+    while( digitalRead( PIN[1] ) == LOW ){
+    }
+    RXnode[2] = micros();
+    //Serial.println(RXnode[2]);
+
+
+
+    while( digitalRead( PIN[3] ) == LOW ){
+    }
+    RXnode[3] = micros();
+    //Serial.println(RXnode[3]);
+
+    while( digitalRead( PIN[4] ) == LOW ){
+    }
+    RXnode[4] = micros();
+
+    while( digitalRead( PIN[5] ) == LOW ){
+    }
+    RXnode[5] = micros();
+    //Serial.println(RXnode[1]);
+
+    while( digitalRead( PIN[5] ) == HIGH ){
+    }
+    RXnode[6] = micros();
+    //Serial.println(RXnode[2]);
+    //Serial.println(RXnode[4]);
+   
+    rawvalue[0] = RXnode[1] - RXnode[0];
+    rawvalue[1] = RXnode[2] - RXnode[1];
+    rawvalue[2] = RXnode[3] - RXnode[2];
+    rawvalue[3] = RXnode[4] - RXnode[3];
+    rawvalue[4] = RXnode[5] - RXnode[4];
+    rawvalue[5] = RXnode[6] - RXnode[5];
+   
+
+ 
+    for ( int l = 0; l < 4; l++) {
+      if ( rawvalue[l] > 1000 && rawvalue[l] < 2000 ) {
+        rxdesired[l]  = map(rawvalue[l], minimum[l], maximum[l], minDesired[l], maxDesired[l]);
+      }
+      else if( rawvalue[1] < 1000 ) {
+        rxdesired[1] = MOTOR_MIN;
+      }
+    }
+
+    desired[ROLL] = rxdesired[rxROLL];
+    desired[THROTTLE] = rxdesired[rxTHROTTLE];
+    desired[PITCH] = rxdesired[rxPITCH];
+    desired[YAW] = rxdesired[rxYAW];
+
+    Serial.print(rawvalue[4]);
+    Serial.print(" ");
+    Serial.println(rawvalue[5]);
     //Serial.println(); 
 
     return true; }
 
 boolean  RX::updateRX( int *desired ) { 
 
-    return update4CH( desired ); 
+    return update6CH( desired ); 
     
     // if( auxcount < 20 ) {
     //     auxcount++;

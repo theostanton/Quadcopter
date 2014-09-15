@@ -11,6 +11,7 @@ class RX {
         boolean updateRX(int *desired); 
     private:
         boolean update4CH(int *desired);
+        boolean update6CH(int *desired);
 
 };
 

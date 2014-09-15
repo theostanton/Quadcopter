@@ -10,7 +10,7 @@ class Sensors {
 		Sensors();
 		void init(); 
 		void setup(); 
-		void read(float DT, int *desired);
+		boolean read(float DT, int *desired);
 		void print();
 		Accel a; 
 		Gyro  g; 

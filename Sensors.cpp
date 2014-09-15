@@ -58,13 +58,18 @@ void Sensors::init(){
 	Serial.println("Done"); 
 }
 
-void Sensors::read(float DT, int *desired){
+boolean Sensors::read(float DT, int *desired){
 
-  	float DTsec = DT / 1000000.0f;
+  float DTsec = DT / 1000000.0f;
 
 	// Accel 
 
-	compass.read();
+	compass.readAcc();
+
+  if( compass.timeoutOccurred() ) {
+    Serial.println("timeoutOccurred");
+    return false; 
+  }
 
 	a.angle[ROLL]   = atan2( (float)compass.a.x * ACCGAIN , sqrt( ACCGAINSQ * ( sq( (float)compass.a.y ) + sq( (float)compass.a.z ) ) ) ) ; 
   a.angle[PITCH]  = atan2( (float)compass.a.y * ACCGAIN , sqrt( ACCGAINSQ * ( sq( (float)compass.a.z ) + sq( (float)compass.a.x ) ) ) ) ;
@@ -116,6 +121,9 @@ void Sensors::read(float DT, int *desired){
   c.rate[ROLL] = g.rate[ROLL];  
   c.rate[PITCH] = g.rate[PITCH];  
   c.rate[YAW] = g.rate[YAW];  
+
+
+  return true; 
 }
 
 void Sensors::print(){
@@ -138,6 +146,11 @@ void Sensors::print(){
 void Sensors::setupAccel(){
     compass.init();
     compass.enableDefault();
+    compass.setTimeout(100);
+
+    Serial.print( "timeout : ");
+    Serial.println(compass.getTimeout());
+
     delay(500); //wait for the sensor to be ready WAS 1500
     compass.m_min.x = -715; compass.m_min.y = -531; compass.m_min.z = -654;
     compass.m_max.x = +346; compass.m_max.y = +519; compass.m_max.z = +389;
@@ -198,5 +211,5 @@ int Sensors::readRegister(int deviceAddress, byte address){
   
       v = Wire.read();
       return v;
-  }
+}
 

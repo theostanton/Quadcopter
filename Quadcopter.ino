@@ -24,6 +24,8 @@ int acc = 0;
 boolean ledState = false;
 long flashRate = 1000L; 
 
+volatile boolean interrupted = false; 
+volatile long interruptedAt = 0L; 
     
 float DT = 0.0f;
 
@@ -38,11 +40,15 @@ struct time {
 time = {0L, 0L, 0L, 0L, 0L, 0L}; 
 
 void setup() {
+	Serial.begin(38400); 
+
 	errorState=0;
     sensors.init(); 
     motors.init(); 
-	Serial.begin(38400); 
 	Serial.println("Start"); 
+
+
+  	attachInterrupt(0, interrupt, FALLING);
 
 	pinMode(LED_PIN,OUTPUT);
 }
@@ -66,8 +72,13 @@ void loop() {
 	// if time to RX
 	// updateRX(); 
 
-	sensors.read(DT, desired);
-	motors.update( sensors.c, desired[THROTTLE], errorState ); 
+	if( sensors.read(DT, desired) ) { 
+		motors.update( sensors.c, desired[THROTTLE], errorState ); 
+	}
+	else {
+		flashRate = 250L;
+		motors.kill(); 
+	}
 	//sensors.print(); 
 
 	if( time.current > ( flashRate + time.tick )) {
@@ -101,6 +112,34 @@ void loop() {
 	}
 
 	checkSerial();
+
+	if(interrupted){
+		Serial.println("Interrupted"); 
+		motors.kill();
+		while(interrupted){
+			ledState = true;
+			toggleLED();
+			delay(100); 
+			toggleLED();
+			delay(100); 
+			toggleLED();
+			delay(100); 
+			toggleLED();
+			delay(600); 
+		}
+	}
+}
+
+void interrupt(){
+	Serial.print("interrupt"); 
+	if(interruptedAt + 1000L < millis() ){
+		Serial.println(" yes");
+		interrupted = !interrupted; 
+		interruptedAt = millis(); 
+	}
+	else {
+		Serial.println(" bounced");
+	}
 }
 
 /*

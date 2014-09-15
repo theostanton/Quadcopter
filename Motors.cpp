@@ -25,7 +25,7 @@ Motors::Motors(){
 		correction[i] = 0.0f; 
 	}
 
-	KP = 0.58f;
+	KP = 0.08f;
   	KI = 0.00f;
  	KD = -0.08f;
 
@@ -65,8 +65,6 @@ void Motors::init(){
 }
 
 void Motors::update(Ctrl ctrl, int throttle, int errorState){
-
-	KI = 0.0f; 
 	
 	d.p[A] = ( + ctrl.error[PITCH] 			+ ctrl.error[ROLL] 			) * KP;
 	d.i[A] = ( + ctrl.error_integral[PITCH] + ctrl.error_integral[ROLL] ) * KI;
@@ -119,6 +117,13 @@ void Motors::print(){
 		Serial.print(command[i]);
 		Serial.print(" ");
 	}
+	Serial.println();
+
+	for(int i=0; i<4; i++){
+		Serial.print(correction[i]);
+		Serial.print(" ");
+	}
+	Serial.println();
 	Serial.println();
 }
 
