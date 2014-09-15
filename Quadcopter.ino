@@ -21,7 +21,7 @@ int acc = 0;
 // Time Structure -----------------------------------------
 
 #define LED_PIN 13
-boolean ledState = false;
+boolean ledState = true;
 long flashRate = 1000L; 
 
 volatile boolean interrupted = false; 
@@ -51,6 +51,7 @@ void setup() {
   	attachInterrupt(0, interrupt, FALLING);
 
 	pinMode(LED_PIN,OUTPUT);
+	toggleLED();
 }
 
 void loop() {

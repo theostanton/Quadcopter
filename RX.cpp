@@ -11,7 +11,7 @@
 
 int RXtemp = 0;
 int RXnodeStart = 0;
-double RXnode[10] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+double RXnode[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 int rawvalue[6]  = { 0, 0, 0, 0, 0, 0 }; 
 int auxcount = 0; 
 
@@ -167,7 +167,7 @@ boolean RX::update6CH( int *desired ) {
 
 boolean  RX::updateRX( int *desired ) { 
 
-    return update6CH( desired ); 
+    return update4CH( desired ); 
     
     // if( auxcount < 20 ) {
     //     auxcount++;
