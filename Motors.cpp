@@ -96,10 +96,30 @@ void Motors::update(Ctrl ctrl, int throttle, int errorState){
 			set(throttle);
 			break;
 		default:
-			Serial.print("Error : ");
-			Serial.println( errorState ); 
+			//Serial.print("Error : ");
+			//Serial.println( errorState ); 
 			kill();
 	}
+}
+
+void Motors::twitch(){
+	Serial.println(); 
+	Serial.println("Twitch"); 
+	for(int i=0; i<4; i++){
+		Serial.println(i); 
+		for(int j=0; j<50; j+=1){
+			if(j%5==0){
+				Serial.print("  ");
+				Serial.print(j); 
+			}
+			servos[i].write(j); 
+			delay(100); 
+		}
+		servos[i].write(1); 
+		Serial.println(); 
+
+	}
+
 }
 
 void Motors::set(int throttle){
@@ -155,5 +175,5 @@ void Motors::kill(){
 	for(int i=0; i<4; i++){
 		servos[i].write( 1 ); 
 	}
-	Serial.println("KILL MOTORS"); 
+	//Serial.println("KILL MOTORS"); 
 }

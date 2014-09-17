@@ -15,6 +15,7 @@ class Motors {
 		void kill();
 		void print(); 
 		void send(); 
+		void twitch(); 
 
 		int command[4];
 		float KP;

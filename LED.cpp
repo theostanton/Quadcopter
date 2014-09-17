@@ -9,10 +9,20 @@ LED::LED(int pinn, String llabel){
 	halted = true; 
 }
 
-void LED::flash(int oonFor, int ooffFor){
+void LED::flash(int ttimes){
+	flash(100,1000,ttimes);
+}
+
+void LED::flash(int oonFor, int rate){
+	flash(oonFor,rate,1);
+}
+
+void LED::flash(int oonFor, int rate,int ttimes){
 	onFor = oonFor;
-	offFor = ooffFor;
+	offFor = rate - oonFor * ttimes - (ttimes - 1) * 100;
+	times = ttimes; 
 	halted = false; 
+	acc = 0; 
 }
 
 void LED::stop(){
@@ -21,7 +31,6 @@ void LED::stop(){
 }
 
 void LED::tick(){
-	Serial.println("Tick " + label); 
 	if( halted ) return; 
 	if( nextToggle < millis() ){
 		toggle();
@@ -29,14 +38,28 @@ void LED::tick(){
 }
 
 void LED::set(bool sstate){
-	Serial.println("set");
-	digitalWrite(pin,state); 
 	state = sstate; 
+	digitalWrite(pin,state); 
 	// nextToggle = millis();
-	nextToggle += state ? onFor : offFor;  
+
+	if(times == 1){
+		nextToggle += state ? onFor : offFor;  
+	}
+	else if( acc == times){
+		nextToggle += offFor; 
+		acc = 0; 
+	}
+	else {
+		if(state){
+			nextToggle += onFor;
+			acc ++; 
+		}
+		else { 
+			nextToggle += 100; 
+		}
+	}
 }
 
 void LED::toggle(){
-	Serial.println("Toggle"); 
 	set( !state );
 }

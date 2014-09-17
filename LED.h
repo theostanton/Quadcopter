@@ -8,10 +8,13 @@ class LED {
     	LED(int pin, String llabel);
     	void tick(); 
     	void toggle(); 
-    	void flash(int oonFor, int ooffFor); 
+    	void flash(int times); 
+    	void flash(int oonFor, int rate); 
+    	void flash(int oonFor, int rate, int times); 
     	void set(bool state); 
     	void stop(); 
     private:
+    	int times; 
     	String label; 
     	bool halted; 
     	int pin; 
@@ -21,7 +24,7 @@ class LED {
     	int offFor; 
     	int acc;
     	int seqLength; 
-    	//int[] sequence; 
+    	int sequence[]; 
 
 
 };

@@ -47,50 +47,26 @@ void setup() {
 	Serial.begin(38400); 
 	Serial.println("Start");
 
-
-  
-	Timer1.initialize(100000); // set a timer of length 100000 microseconds (or 0.1 sec - or 10Hz => the led will blink 5 times, 5 cycles of on-and-off, per second)
-	Timer1.attachInterrupt( tickLEDs ); // attach the service routine here
-	amberLED.flash(100,100); 
-
+    amberLED.set(true); 
 	errorState=0;
-
     sensors.init(); 
-    motors.init(); 
+    motors.init();
+  	attachInterrupt(0, interrupt, FALLING);
 
-
-
-    while(true){
-		Serial.print("!");
-		delay(100);
-    }
-
-
-  	// attachInterrupt(0, interrupt, FALLING);
-
-
-	delay(1000); 
-	greenLED.flash(100,900); 
+	greenLED.flash(100,1000,2); 
 	amberLED.stop(); 
+
+	motors.twitch(); 
 
 
 }
 
 void tickLEDs() {
-	// Interrupt via timerOne
-	Serial.println("tickLEDs");
 	greenLED.tick();
 	amberLED.tick();
-	// Timer1.restart();
-	// Timer1.start();
 }
 
-void loop(){
-	Serial.print(",");
-	delay(100);
-}
-
-void laoop() {
+void loop() {
 
 	time.previousMicros = time.currentMicros;
 	time.currentMicros  = micros();
@@ -116,22 +92,18 @@ void laoop() {
 		Serial.println("Sensor error"); 
 		amberLED.flash(100,500);
 	}
-	if( false && time.current > ( 50L + time.tx )) {
+	if( time.current > ( 50L + time.tx )) {
 		//comms.sendPacket(sensors.c, sensors.a, sensors.g, motors.d, desired);
 		switch(errorState){
 			case NOERR:
 				if( !rx.updateRX( desired ) ) {
-					Serial.println("RX error"); 
-					amberLED.flash(500,100); 
-					errorState = RXERR; 
+					alertError( RXERR ); 
 				}
 				break;
 			case RXERR:
 				Serial.println("Case:RXERR");
 				if( rx.updateRX( desired ) ){
-					amberLED.stop(); 
-					errorState = NOERR; 
-					Serial.println("Set error to : NOERR");
+					alertError(NOERR); 
 				}
 				break;
 			default:
@@ -143,7 +115,7 @@ void laoop() {
 
 	}
 
-Serial.print("."); 
+	tickLEDs(); 
 
 	checkSerial();
 
@@ -174,6 +146,30 @@ void interrupt(){
 	}
 	else {
 		Serial.println(" bounced");
+	}
+}
+
+void alertError(int error){
+	switch(error){
+		case NOERR:
+			Serial.println("Exit error"); 
+			amberLED.stop();
+			greenLED.flash(2); 
+			errorState = NOERR;
+			return;
+		case RXERR:
+			Serial.println("RX ERR"); 
+			amberLED.flash(500,1000);
+			greenLED.stop(); 
+			errorState = RXERR;
+			return; 
+		default:
+			Serial.println("Other error");
+			amberLED.flash(2);
+			greenLED.stop(); 
+			errorState = 3; 
+			return; 
+
 	}
 }
 

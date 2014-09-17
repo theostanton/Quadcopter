@@ -49,7 +49,7 @@ boolean RX::update4CH( int *desired ) {
     while( digitalRead( PIN[0] ) == LOW ){
         if( micros() - strt > 20000L ){
             Serial.println("RX Timeout");
-            return true; 
+            return false; 
         }
     }
     RXnode[0] = micros();
@@ -103,21 +103,29 @@ boolean RX::update4CH( int *desired ) {
 boolean RX::update6CH( int *desired ) {
 
 
-    long start = micros(); 
+    long strt = micros(); 
     while( digitalRead( PIN[0] ) == LOW ){
-        if( micros() - start > 20000L ){
+        if( micros() - strt > 100000L ){
+            Serial.println("RX Timeout PIN0");
             return false; 
         }
     }
     RXnode[0] = micros();
     //Serial.println(RXnode[0]);
-
+    
     while( digitalRead( PIN[2] ) == LOW ){
+        if( micros() - strt > 100000L ){
+            Serial.println("RX Timeout PIN2");
+            return false; 
+        }
     }
     RXnode[1] = micros();
     //Serial.println(RXnode[1]);
-
     while( digitalRead( PIN[1] ) == LOW ){
+        if( micros() - strt > 1000000.L ){
+            Serial.println("RX Timeout PIN1");
+            return false; 
+        }
     }
     RXnode[2] = micros();
     //Serial.println(RXnode[2]);
@@ -125,15 +133,27 @@ boolean RX::update6CH( int *desired ) {
 
 
     while( digitalRead( PIN[3] ) == LOW ){
+        if( micros() - strt > 100000L ){
+            Serial.println("RX Timeout PIN3");
+            return false; 
+        }
     }
     RXnode[3] = micros();
     //Serial.println(RXnode[3]);
 
     while( digitalRead( PIN[4] ) == LOW ){
+        if( micros() - strt > 100000L ){
+            Serial.println("RX Timeout PIN4");
+            return false; 
+        }
     }
     RXnode[4] = micros();
 
     while( digitalRead( PIN[5] ) == LOW ){
+        if( micros() - strt > 100000L ){
+            Serial.println("RX Timeout PIN5");
+            return false; 
+        }
     }
     RXnode[5] = micros();
     //Serial.println(RXnode[1]);
