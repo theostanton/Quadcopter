@@ -8,26 +8,31 @@
 #define C 2 // REAR RIGHT - circuit
 #define D 3 // REAR LEFT - circuit
 
-#define MOTOR_A_PIN 3
-#define MOTOR_B_PIN 10
-#define MOTOR_C_PIN 9
-#define MOTOR_D_PIN 5
+#define MOTOR_A_PIN 5
+#define MOTOR_B_PIN 9
+#define MOTOR_C_PIN 3
+#define MOTOR_D_PIN 10
 
 
 
 Motors::Motors(){
-	pins[A] = MOTOR_A_PIN; 
-	pins[B] = MOTOR_B_PIN; 
-	pins[C] = MOTOR_C_PIN; 
-	pins[D] = MOTOR_D_PIN; 
+	// pins[A] = MOTOR_A_PIN; 
+	// pins[B] = MOTOR_B_PIN; 
+	// pins[C] = MOTOR_C_PIN; 
+	// pins[D] = MOTOR_D_PIN; 
+
+	pins[A] = 9; 
+	pins[B] = 5; 
+	pins[C] = 10; 
+	pins[D] = 3; 
 
 	for(int i=0; i<4; i++) {
 		correction[i] = 0.0f; 
 	}
 
-	KP = 0.08f;
+	KP = 0.5f;
   	KI = 0.00f;
- 	KD = -0.08f;
+ 	KD = - 0.08f;
 
 	d = (Data) {
 		{ 0.0f,0.0f,0.0f,0.0f},
@@ -68,22 +73,22 @@ void Motors::update(Ctrl ctrl, int throttle, int errorState){
 	
 	d.p[A] = ( + ctrl.error[PITCH] 			+ ctrl.error[ROLL] 			) * KP;
 	d.i[A] = ( + ctrl.error_integral[PITCH] + ctrl.error_integral[ROLL] ) * KI;
-	d.d[A] = ( + ctrl.rate[PITCH] 			+ ctrl.rate[ROLL] 			) * KD;
+	d.d[A] = ( - ctrl.rate[PITCH] 			+ ctrl.rate[ROLL] 			) * KD;
 	correction[A] = d.p[A] + d.i[A] + d.d[A]; // + YAW Corr
 	
 	d.p[B] = ( + ctrl.error[PITCH] 			- ctrl.error[ROLL] 			) * KP;
 	d.i[B] = ( + ctrl.error_integral[PITCH] - ctrl.error_integral[ROLL] ) * KI;
-	d.d[B] = ( + ctrl.rate[PITCH] 			- ctrl.rate[ROLL] 			) * KD;
+	d.d[B] = ( - ctrl.rate[PITCH] 			- ctrl.rate[ROLL] 			) * KD;
 	correction[B] = d.p[B] + d.i[B] + d.d[B]; // + YAW Corr
 	
 	d.p[C] = ( - ctrl.error[PITCH] 			+ ctrl.error[ROLL] 			) * KP;
 	d.i[C] = ( - ctrl.error_integral[PITCH] + ctrl.error_integral[ROLL] ) * KI;
-	d.d[C] = ( - ctrl.rate[PITCH] 			+ ctrl.rate[ROLL] 			) * KD;
+	d.d[C] = ( + ctrl.rate[PITCH] 			+ ctrl.rate[ROLL] 			) * KD;
 	correction[C] = d.p[C] + d.i[C] + d.d[C]; // + YAW Corr
 
 	d.p[D] = ( - ctrl.error[PITCH] 			- ctrl.error[ROLL] 			) * KP;
 	d.i[D] = ( - ctrl.error_integral[PITCH] - ctrl.error_integral[ROLL] ) * KI;
-	d.d[D] = ( - ctrl.rate[PITCH] 			- ctrl.rate[ROLL] 			) * KD;
+	d.d[D] = (  ctrl.rate[PITCH] 			- ctrl.rate[ROLL] 			) * KD;
 	correction[D] = d.p[D] + d.i[D] + d.d[D]; // + YAW Corr
 
 	switch(errorState){
@@ -91,6 +96,8 @@ void Motors::update(Ctrl ctrl, int throttle, int errorState){
 			set(throttle);
 			break;
 		default:
+			Serial.print("Error : ");
+			Serial.println( errorState ); 
 			kill();
 	}
 }
@@ -112,6 +119,23 @@ void Motors::set(int throttle){
 
 }
 
+void Motors::send(){
+	char lab[] = {'a','b','c','d'};
+	for( int i=0; i<4; i++){
+		Serial.print(lab[i]);
+		Serial.print(",");
+		Serial.print( int(d.p[i]*1000.0f) );
+		Serial.print(",");
+		Serial.print( int(d.i[i]*1000.0f) );
+		Serial.print(",");
+		Serial.print( int(d.d[i]*1000.0f) );
+		Serial.print(",");
+		Serial.print( int(correction[i]) ); 
+		Serial.println(); 
+	}
+
+}
+
 void Motors::print(){
 	for(int i=0; i<4; i++){
 		Serial.print(command[i]);
@@ -129,7 +153,7 @@ void Motors::print(){
 
 void Motors::kill(){
 	for(int i=0; i<4; i++){
-		servos[i].write( 0 ); 
+		servos[i].write( 1 ); 
 	}
 	Serial.println("KILL MOTORS"); 
 }

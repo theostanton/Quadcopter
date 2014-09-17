@@ -24,7 +24,6 @@ const int PIN[6] = { ROLL_PIN, THROTTLE_PIN, PITCH_PIN, YAW_PIN, AUX1_PIN, AUX2_
 int rxdesired[6] = { 0,0,0,0,0,0 };
 
 RX::RX(){
-
     pinMode(ROLL_PIN,INPUT); 
     pinMode(THROTTLE_PIN,INPUT); 
     pinMode(PITCH_PIN,INPUT); 
@@ -34,13 +33,23 @@ RX::RX(){
 
 }
 
+void RX::send(){
+    Serial.print("R");
+    for (int i = 0; i < 6; i++){
+        Serial.print(",");
+        Serial.print( int( rawvalue[i] ) );
+    }
+    Serial.println(); 
+}
+
 boolean RX::update4CH( int *desired ) {
 
 
-    long start = micros(); 
+    long strt = micros(); 
     while( digitalRead( PIN[0] ) == LOW ){
-        if( micros() - start > 20000L ){
-            return false; 
+        if( micros() - strt > 20000L ){
+            Serial.println("RX Timeout");
+            return true; 
         }
     }
     RXnode[0] = micros();
@@ -134,13 +143,23 @@ boolean RX::update6CH( int *desired ) {
     RXnode[6] = micros();
     //Serial.println(RXnode[2]);
     //Serial.println(RXnode[4]);
+
+
+    for(int i=0; i<6; i++){
+        if(RXnode[i+1] - RXnode[i] > 950){
+            rawvalue[i] = RXnode[i+1] - RXnode[i];
+            if(i==4){
+                rawvalue[i] -= 1500;
+            }
+        }
+    }
    
-    rawvalue[0] = RXnode[1] - RXnode[0];
-    rawvalue[1] = RXnode[2] - RXnode[1];
-    rawvalue[2] = RXnode[3] - RXnode[2];
-    rawvalue[3] = RXnode[4] - RXnode[3];
-    rawvalue[4] = RXnode[5] - RXnode[4];
-    rawvalue[5] = RXnode[6] - RXnode[5];
+    // rawvalue[0] = RXnode[1] - RXnode[0];
+    // rawvalue[1] = RXnode[2] - RXnode[1];
+    // rawvalue[2] = RXnode[3] - RXnode[2];
+    // rawvalue[3] = RXnode[4] - RXnode[3];
+    // rawvalue[4] = RXnode[5] - RXnode[4];
+    // rawvalue[5] = RXnode[6] - RXnode[5];
    
 
  
@@ -158,16 +177,17 @@ boolean RX::update6CH( int *desired ) {
     desired[PITCH] = rxdesired[rxPITCH];
     desired[YAW] = rxdesired[rxYAW];
 
-    Serial.print(rawvalue[4]);
-    Serial.print(" ");
-    Serial.println(rawvalue[5]);
+    // Serial.print(rawvalue[4]);
+    // Serial.print(" ");
+    // Serial.println(rawvalue[5]);
     //Serial.println(); 
 
-    return true; }
+    return true; 
+}
 
 boolean  RX::updateRX( int *desired ) { 
 
-    return update4CH( desired ); 
+    return update6CH( desired ); 
     
     // if( auxcount < 20 ) {
     //     auxcount++;

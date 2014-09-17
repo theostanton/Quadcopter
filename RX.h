@@ -9,6 +9,7 @@ class RX {
     public:
         RX(); 
         boolean updateRX(int *desired); 
+        void send();
     private:
         boolean update4CH(int *desired);
         boolean update6CH(int *desired);

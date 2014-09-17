@@ -13,7 +13,7 @@ class Comms {
 		void send(Ctrl ctrl); 
 		void send(Accel accel); 
 		void send(Gyro gyro); 
-		void send(Data data); 
+		//void send(Data data); 
 		void sendPacket(Ctrl ctrl, Accel accel, Gyro gyro, Data data, int *desired); 
 
 };

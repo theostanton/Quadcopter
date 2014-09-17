@@ -2,12 +2,20 @@
 int errorState = 0; 
 int desired[] = {0, 0, 0, 0};
 
+// Conflicts with Servo.h #include <TimerOne.h>
+
 #include <Structs.h>
 #include <Servo.h>
 #include <Sensors.h>
 #include <Motors.h>
 #include <Comms.h>
 #include <RX.h>
+#include <LED.h>
+
+
+
+LED amberLED(A2,"Amber"); 
+LED greenLED(A3,"Green"); 
 
 Sensors sensors; 
 Motors motors; 
@@ -17,12 +25,6 @@ RX rx;
 int acc = 0; 
 
 // ROLL PITCH YAW THROTTLE
-
-// Time Structure -----------------------------------------
-
-#define LED_PIN 13
-boolean ledState = true;
-long flashRate = 1000L; 
 
 volatile boolean interrupted = false; 
 volatile long interruptedAt = 0L; 
@@ -40,21 +42,55 @@ struct time {
 time = {0L, 0L, 0L, 0L, 0L, 0L}; 
 
 void setup() {
+
+
 	Serial.begin(38400); 
+	Serial.println("Start");
+
+
+  
+	Timer1.initialize(100000); // set a timer of length 100000 microseconds (or 0.1 sec - or 10Hz => the led will blink 5 times, 5 cycles of on-and-off, per second)
+	Timer1.attachInterrupt( tickLEDs ); // attach the service routine here
+	amberLED.flash(100,100); 
 
 	errorState=0;
+
     sensors.init(); 
     motors.init(); 
-	Serial.println("Start"); 
 
 
-  	attachInterrupt(0, interrupt, FALLING);
 
-	pinMode(LED_PIN,OUTPUT);
-	toggleLED();
+    while(true){
+		Serial.print("!");
+		delay(100);
+    }
+
+
+  	// attachInterrupt(0, interrupt, FALLING);
+
+
+	delay(1000); 
+	greenLED.flash(100,900); 
+	amberLED.stop(); 
+
+
 }
 
-void loop() {
+void tickLEDs() {
+	// Interrupt via timerOne
+	Serial.println("tickLEDs");
+	greenLED.tick();
+	amberLED.tick();
+	// Timer1.restart();
+	// Timer1.start();
+}
+
+void loop(){
+	Serial.print(",");
+	delay(100);
+}
+
+void laoop() {
 
 	time.previousMicros = time.currentMicros;
 	time.currentMicros  = micros();
@@ -77,40 +113,37 @@ void loop() {
 		motors.update( sensors.c, desired[THROTTLE], errorState ); 
 	}
 	else {
-		flashRate = 250L;
-		motors.kill(); 
+		Serial.println("Sensor error"); 
+		amberLED.flash(100,500);
 	}
-	//sensors.print(); 
-
-	if( time.current > ( flashRate + time.tick )) {
-		toggleLED();
-		motors.print(); 
-		time.tick = time.current; 
-	}
-
-	if( time.current > ( 50L + time.tx )) {
+	if( false && time.current > ( 50L + time.tx )) {
 		//comms.sendPacket(sensors.c, sensors.a, sensors.g, motors.d, desired);
-
 		switch(errorState){
 			case NOERR:
 				if( !rx.updateRX( desired ) ) {
-					flashRate = 250L;
+					Serial.println("RX error"); 
+					amberLED.flash(500,100); 
 					errorState = RXERR; 
 				}
 				break;
 			case RXERR:
+				Serial.println("Case:RXERR");
 				if( rx.updateRX( desired ) ){
-					flashRate = 1000L;
+					amberLED.stop(); 
 					errorState = NOERR; 
+					Serial.println("Set error to : NOERR");
 				}
 				break;
 			default:
 				Serial.println("Error missed"); 
 		}
+		//rx.send(); 
 		//sendAll(); 
 		time.tx = time.current; 
 
 	}
+
+Serial.print("."); 
 
 	checkSerial();
 
@@ -118,15 +151,16 @@ void loop() {
 		Serial.println("Interrupted"); 
 		motors.kill();
 		while(interrupted){
-			ledState = true;
-			toggleLED();
-			delay(100); 
-			toggleLED();
-			delay(100); 
-			toggleLED();
-			delay(100); 
-			toggleLED();
-			delay(600); 
+			amberLED.flash(500,500); 
+			// ledState = true;
+			// toggleLED();
+			// delay(100); 
+			// toggleLED();
+			// delay(100); 
+			// toggleLED();
+			// delay(100); 
+			// toggleLED();
+			// delay(600); 
 		}
 	}
 }
@@ -222,16 +256,12 @@ void checkSerial(){
 	}
 }
 
+
 void sendAll(){
+	rx.send(); 
 	comms.send( sensors.c );
 	comms.send( sensors.a );
 	comms.send( sensors.g );
-	comms.send( motors.d );
+	motors.send( );
 	comms.send( desired );
 }
-
-void toggleLED(){
-	digitalWrite(LED_PIN,ledState);
-	ledState = !ledState; 
-}
-

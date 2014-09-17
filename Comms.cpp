@@ -10,6 +10,7 @@ void Comms::init(){
 	Serial.println("init");
 }
 
+
 void Comms::sendPacket(Ctrl ctrl, Accel accel, Gyro gyro, Data data, int * desired){
 	//long now = micros(); 
 	Serial.print("P,"); 
@@ -69,6 +70,7 @@ void Comms::sendPacket(Ctrl ctrl, Accel accel, Gyro gyro, Data data, int * desir
 
 }
 
+
 void Comms::send(int *desired){
 	Serial.print("D,");
 	Serial.print( -desired[ROLL]);
@@ -118,19 +120,21 @@ void Comms::send(Gyro gyro){
 	Serial.println();
 }
 
-void Comms::send(Data data){
-	char lab[] = {'a','b','c','d'};
-	for( int i=0; i<4; i++){
-		Serial.print(lab[i]);
-		Serial.print(",");
-		Serial.print( int(data.p[i]*1000.0f) );
-		Serial.print(",");
-		Serial.print( int(data.i[i]*1000.0f) );
-		Serial.print(",");
-		Serial.print( int(data.d[i]*1000.0f) );
-		Serial.println(); 
-	}
-}
+// void Comms::send(Data data){
+// 	char lab[] = {'a','b','c','d'};
+// 	for( int i=0; i<4; i++){
+// 		Serial.print(lab[i]);
+// 		Serial.print(",");
+// 		Serial.print( int(data.p[i]*1000.0f) );
+// 		Serial.print(",");
+// 		Serial.print( int(data.i[i]*1000.0f) );
+// 		Serial.print(",");
+// 		Serial.print( int(data.d[i]*1000.0f) );
+// 		Serial.print(",");
+// 		Serial.print( int(data.))
+// 		Serial.println(); 
+// 	}
+// }
 
 
 

@@ -14,6 +14,7 @@ class Motors {
 		void update(Ctrl ctrl,int throttle,int errorState); 
 		void kill();
 		void print(); 
+		void send(); 
 
 		int command[4];
 		float KP;
