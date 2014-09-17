@@ -58,7 +58,7 @@ struct Data {
 #define AUX1_PIN 7 // CIRCUIT
 #define AUX2_PIN 8 // CIRCUIT
 
-#define MOTOR_MIN 1 // minimum throttle servo command angle
+#define MOTOR_MIN 12 // minimum throttle servo command angle
 #define MOTOR_MAX 179 // max throttle servo angle command
 
 #endif

@@ -6,7 +6,7 @@
 
 LSM303 compass; 
 
-#define RATIO 0.95
+#define RATIO 0.9
 
 #define GYROGAIN 14.735
 #define RAD_TO_DEG 57.30
@@ -79,11 +79,11 @@ boolean Sensors::read(float DT, int *desired){
   a.angle[YAW]    *= RAD_TO_DEG ;
   
   	//ACC LPF
-	a.angle[ROLL]  += 2.0f * a.prev[ROLL];
-	a.angle[PITCH] += 2.0f * a.prev[PITCH];
+	a.angle[ROLL]  += a.prev[ROLL];
+	a.angle[PITCH] += a.prev[PITCH];
 
-	a.angle[ROLL]  /= 3.0f;
-	a.angle[PITCH] /= 3.0f;
+	a.angle[ROLL]  /= 2.0f;
+	a.angle[PITCH] /= 2.0f;
 
 	a.prev[ROLL]  = a.angle[ROLL];
 	a.prev[PITCH] = a.angle[PITCH];

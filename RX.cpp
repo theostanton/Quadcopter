@@ -17,7 +17,7 @@ int auxcount = 0;
 
 const int minimum[6] = { 1000, 1045, 1000, 1040, 1000, 1000};
 const int maximum[6] = { 1900, 1835, 1900, 1800, 1900, 1900};
-const int minDesired[4] = { 45, MOTOR_MIN, -45, 10 };
+const int minDesired[4] = { 45, 0, -45, 10 };
 const int maxDesired[4] = { -45, MOTOR_MAX, 45, -10 };
 const int PIN[6] = { ROLL_PIN, THROTTLE_PIN, PITCH_PIN, YAW_PIN, AUX1_PIN, AUX2_PIN};
 
@@ -103,6 +103,15 @@ boolean RX::update4CH( int *desired ) {
 boolean RX::update6CH( int *desired ) {
 
 
+    bool missed = false; 
+
+    // if CH1 already high then wait WHOLE sequence.   
+    // TODO: sync!
+    if( digitalRead( PIN[0] ) == HIGH ){
+        Serial.println("HIGH"); 
+        return true; 
+    }
+
     long strt = micros(); 
     while( digitalRead( PIN[0] ) == LOW ){
         if( micros() - strt > 100000L ){
@@ -110,8 +119,12 @@ boolean RX::update6CH( int *desired ) {
             return false; 
         }
     }
+    // long now = micros(); 
+    // Serial.print(now - RXnode[0]);
+    // Serial.print(" ");
+    // Serial.println(strt - now); 
+    // RXnode[0] = now;
     RXnode[0] = micros();
-    //Serial.println(RXnode[0]);
     
     while( digitalRead( PIN[2] ) == LOW ){
         if( micros() - strt > 100000L ){
@@ -122,7 +135,7 @@ boolean RX::update6CH( int *desired ) {
     RXnode[1] = micros();
     //Serial.println(RXnode[1]);
     while( digitalRead( PIN[1] ) == LOW ){
-        if( micros() - strt > 1000000.L ){
+        if( micros() - strt > 1000000L ){
             Serial.println("RX Timeout PIN1");
             return false; 
         }
@@ -168,9 +181,9 @@ boolean RX::update6CH( int *desired ) {
     for(int i=0; i<6; i++){
         if(RXnode[i+1] - RXnode[i] > 950){
             rawvalue[i] = RXnode[i+1] - RXnode[i];
-            if(i==4){
-                rawvalue[i] -= 1500;
-            }
+            // if(i==4){
+            //     rawvalue[i] -= 1500;
+            // }
         }
     }
    
@@ -181,8 +194,6 @@ boolean RX::update6CH( int *desired ) {
     // rawvalue[4] = RXnode[5] - RXnode[4];
     // rawvalue[5] = RXnode[6] - RXnode[5];
    
-
- 
     for ( int l = 0; l < 4; l++) {
       if ( rawvalue[l] > 1000 && rawvalue[l] < 2000 ) {
         rxdesired[l]  = map(rawvalue[l], minimum[l], maximum[l], minDesired[l], maxDesired[l]);
@@ -192,7 +203,7 @@ boolean RX::update6CH( int *desired ) {
       }
     }
 
-    desired[ROLL] = rxdesired[rxROLL];
+    if(!missed)  desired[ROLL] = rxdesired[rxROLL];
     desired[THROTTLE] = rxdesired[rxTHROTTLE];
     desired[PITCH] = rxdesired[rxPITCH];
     desired[YAW] = rxdesired[rxYAW];

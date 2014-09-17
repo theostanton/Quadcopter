@@ -41,6 +41,7 @@ struct time {
 }
 time = {0L, 0L, 0L, 0L, 0L, 0L}; 
 
+
 void setup() {
 
 
@@ -55,8 +56,6 @@ void setup() {
 
 	greenLED.flash(100,1000,2); 
 	amberLED.stop(); 
-
-	motors.twitch(); 
 
 
 }
@@ -92,7 +91,10 @@ void loop() {
 		Serial.println("Sensor error"); 
 		amberLED.flash(100,500);
 	}
-	if( time.current > ( 50L + time.tx )) {
+
+	// time.tx asssigned differently.
+	// shouldn't be called tx. 
+	if( time.current > (  time.tx )) {
 		//comms.sendPacket(sensors.c, sensors.a, sensors.g, motors.d, desired);
 		switch(errorState){
 			case NOERR:
@@ -110,14 +112,15 @@ void loop() {
 				Serial.println("Error missed"); 
 		}
 		//rx.send(); 
-		//sendAll(); 
-		time.tx = time.current; 
+		sendAll(); 
+		time.tx = millis() + 40L; 
 
 	}
 
 	tickLEDs(); 
 
 	checkSerial();
+
 
 	if(interrupted){
 		Serial.println("Interrupted"); 

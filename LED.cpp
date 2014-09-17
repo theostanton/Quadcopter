@@ -23,6 +23,9 @@ void LED::flash(int oonFor, int rate,int ttimes){
 	times = ttimes; 
 	halted = false; 
 	acc = 0; 
+	state = false;
+	nextToggle = millis();
+	set(false);
 }
 
 void LED::stop(){

@@ -8,31 +8,26 @@
 #define C 2 // REAR RIGHT - circuit
 #define D 3 // REAR LEFT - circuit
 
-#define MOTOR_A_PIN 5
-#define MOTOR_B_PIN 9
+#define MOTOR_A_PIN 9
+#define MOTOR_B_PIN 5
 #define MOTOR_C_PIN 3
 #define MOTOR_D_PIN 10
 
 
 
 Motors::Motors(){
-	// pins[A] = MOTOR_A_PIN; 
-	// pins[B] = MOTOR_B_PIN; 
-	// pins[C] = MOTOR_C_PIN; 
-	// pins[D] = MOTOR_D_PIN; 
-
-	pins[A] = 9; 
-	pins[B] = 5; 
-	pins[C] = 10; 
-	pins[D] = 3; 
+	pins[A] = MOTOR_A_PIN; 
+	pins[B] = MOTOR_B_PIN; 
+	pins[C] = MOTOR_C_PIN; 
+	pins[D] = MOTOR_D_PIN; 
 
 	for(int i=0; i<4; i++) {
 		correction[i] = 0.0f; 
 	}
 
-	KP = 0.5f;
+	KP = 0.1f;
   	KI = 0.00f;
- 	KD = - 0.08f;
+ 	KD = - 0.1f;
 
 	d = (Data) {
 		{ 0.0f,0.0f,0.0f,0.0f},
@@ -47,7 +42,12 @@ void Motors::init(){
 	for(int i=0; i<4; i++){
 		pinMode(pins[i],OUTPUT); 
 		servos[i].attach( pins[i] );
-		servos[i].write( 10 );  
+		servos[i].write( 0 );  
+	}
+	delay(2000); 
+
+	for(int i=0; i<4; i++){
+		servos[i].write(12); 
 	}
 	// delay( 1000 );
 
@@ -81,60 +81,101 @@ void Motors::update(Ctrl ctrl, int throttle, int errorState){
 	d.d[B] = ( - ctrl.rate[PITCH] 			- ctrl.rate[ROLL] 			) * KD;
 	correction[B] = d.p[B] + d.i[B] + d.d[B]; // + YAW Corr
 	
-	d.p[C] = ( - ctrl.error[PITCH] 			+ ctrl.error[ROLL] 			) * KP;
-	d.i[C] = ( - ctrl.error_integral[PITCH] + ctrl.error_integral[ROLL] ) * KI;
-	d.d[C] = ( + ctrl.rate[PITCH] 			+ ctrl.rate[ROLL] 			) * KD;
+	d.p[C] = ( - ctrl.error[PITCH] 			- ctrl.error[ROLL] 			) * KP;
+	d.i[C] = ( - ctrl.error_integral[PITCH] - ctrl.error_integral[ROLL] ) * KI;
+	d.d[C] = ( + ctrl.rate[PITCH] 			- ctrl.rate[ROLL] 			) * KD;
 	correction[C] = d.p[C] + d.i[C] + d.d[C]; // + YAW Corr
 
-	d.p[D] = ( - ctrl.error[PITCH] 			- ctrl.error[ROLL] 			) * KP;
-	d.i[D] = ( - ctrl.error_integral[PITCH] - ctrl.error_integral[ROLL] ) * KI;
-	d.d[D] = (  ctrl.rate[PITCH] 			- ctrl.rate[ROLL] 			) * KD;
+	d.p[D] = ( - ctrl.error[PITCH] 			+ ctrl.error[ROLL] 			) * KP;
+	d.i[D] = ( - ctrl.error_integral[PITCH] + ctrl.error_integral[ROLL] ) * KI;
+	d.d[D] = (  ctrl.rate[PITCH] 			+ ctrl.rate[ROLL] 			) * KD;
 	correction[D] = d.p[D] + d.i[D] + d.d[D]; // + YAW Corr
 
-	switch(errorState){
-		case NOERR:
-			set(throttle);
-			break;
-		default:
-			//Serial.print("Error : ");
-			//Serial.println( errorState ); 
-			kill();
+
+	if(errorState == NOERR){
+		set(throttle);
+	}
+	else {
+		kill(); 
 	}
 }
 
 void Motors::twitch(){
+
 	Serial.println(); 
 	Serial.println("Twitch"); 
+
 	for(int i=0; i<4; i++){
-		Serial.println(i); 
+		servos[i].write(20);
+	}
+	delay(3000); 
+
+	for(int i=0; i<4; i++){
+		Serial.print("Pin "); 
+		Serial.println(pins[i]); 
 		for(int j=0; j<50; j+=1){
 			if(j%5==0){
 				Serial.print("  ");
 				Serial.print(j); 
 			}
 			servos[i].write(j); 
-			delay(100); 
+			delay(33); 
 		}
+		servos[i].write(10);
+		delay(1000);
+		servos[i].write(179);
+		delay(300);
 		servos[i].write(1); 
 		Serial.println(); 
 
 	}
 
+	for(int i=0; i<4; i++){
+		servos[i].write(25);
+	}
+	delay(5000); 
+
 }
 
 void Motors::set(int throttle){
- 
-	
-	for (int i = 0; i < 4; i++) {
-		command[i] = int( correction[i] ) + throttle;
-		//if( command[i] > 100) command[i] = 179;
-		//if( command[i] < 100) command[i] = 1;
-		if( command[i] > MOTOR_MAX) command[i] = MOTOR_MAX;
-		if( command[i] < MOTOR_MIN) command[i] = MOTOR_MIN;
+
+	bool calibrate = false; 
+	if(calibrate){
+		Serial.print("Calibrate ");
+		if(throttle > 100){
+			Serial.println(MOTOR_MAX); 
+			for(int i=0; i<4; i++){
+				servos[i].write( MOTOR_MAX ); 
+			}
+		}
+		else {
+			Serial.println(MOTOR_MIN); 
+			for(int i=0; i<4; i++){
+				servos[i].write( 12 ); 
+			}
+		}
+		return; 
 	}
 
-	for(int i=0; i<4; i++){
-		servos[i].write( command[i] ); 
+	if(throttle < MOTOR_MIN){
+		for(int i=0; i<4; i++){
+			servos[i].write( 0 ); 
+		}
+	} 
+	else {
+		for (int i = 0; i < 4; i++) {
+			command[i] = int( correction[i] ) + throttle;
+			if( command[i] > MOTOR_MAX) command[i] = MOTOR_MAX;
+			if( command[i] < MOTOR_MIN) command[i] = MOTOR_MIN;
+			//if( command[i] < MOTOR_MIN) command[i] = 0;
+		}
+
+		for(int i=0; i<4; i++){
+			// Serial.print(command[i]);
+			// Serial.print(" ");
+			servos[i].write( command[i] ); 
+		}
+		// Serial.println(); 
 	}
 
 }
