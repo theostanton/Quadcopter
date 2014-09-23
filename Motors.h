@@ -17,6 +17,9 @@ class Motors {
 		void send(); 
 		void twitch(); 
 
+		void setKD( float kd );
+		void setKP( float kp );
+
 		int command[4];
 		float KP;
 		float KI;

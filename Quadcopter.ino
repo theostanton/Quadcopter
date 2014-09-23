@@ -11,16 +11,24 @@ int desired[] = {0, 0, 0, 0};
 #include <Comms.h>
 #include <RX.h>
 #include <LED.h>
-
-
+#include <Timer.h>
 
 LED amberLED(A2,"Amber"); 
 LED greenLED(A3,"Green"); 
+
+
+Timer loopTimer("Loop",0); 
+Timer sensorTimer("Sensor",1); 
+Timer motorTimer("Motor",2); 
+Timer rxTimer("RX",3); 
+Timer serialTimer("Serial",4); 
 
 Sensors sensors; 
 Motors motors; 
 Comms comms; 
 RX rx; 
+
+bool success = false; 
 
 int acc = 0; 
 
@@ -37,15 +45,16 @@ struct time {
   unsigned long previousMicros;
   unsigned long previous;
   unsigned long tx;
+  unsigned long rx;
   unsigned long tick;
 }
-time = {0L, 0L, 0L, 0L, 0L, 0L}; 
+time = {0L, 0L, 0L, 0L, 0L, 0L, 0L}; 
 
 
 void setup() {
 
 
-	Serial.begin(38400); 
+	Serial.begin(115200); 
 	Serial.println("Start");
 
     amberLED.set(true); 
@@ -57,6 +66,13 @@ void setup() {
 	greenLED.flash(100,1000,2); 
 	amberLED.stop(); 
 
+	// rxTimer.setPrint(true); 
+	// serialTimer.setPrint(true); 
+	// sensorTimer.setPrint(true); 
+	// loopTimer.setPrint(true); 
+	// serialTimer.setPrint(true); 
+
+	//motors.twitch(); 
 
 }
 
@@ -66,6 +82,7 @@ void tickLEDs() {
 }
 
 void loop() {
+	loopTimer.ticketytock(); 
 
 	time.previousMicros = time.currentMicros;
 	time.currentMicros  = micros();
@@ -84,67 +101,93 @@ void loop() {
 	// if time to RX
 	// updateRX(); 
 
-	if( sensors.read(DT, desired) ) { 
+	sensorTimer.tick();
+	success = sensors.read(DT, desired); 
+	sensorTimer.tock(); 
+
+	if( success ) { 
+		motorTimer.tick(); 
 		motors.update( sensors.c, desired[THROTTLE], errorState ); 
+		motorTimer.tock(); 
 	}
 	else {
 		Serial.println("Sensor error"); 
 		amberLED.flash(100,500);
 	}
 
-	// time.tx asssigned differently.
-	// shouldn't be called tx. 
-	if( time.current > (  time.tx )) {
-		//comms.sendPacket(sensors.c, sensors.a, sensors.g, motors.d, desired);
-		switch(errorState){
-			case NOERR:
-				if( !rx.updateRX( desired ) ) {
-					alertError( RXERR ); 
-				}
-				break;
-			case RXERR:
-				Serial.println("Case:RXERR");
-				if( rx.updateRX( desired ) ){
-					alertError(NOERR); 
-				}
-				break;
-			default:
-				Serial.println("Error missed"); 
-		}
-		//rx.send(); 
-		sendAll(); 
-		time.tx = millis() + 40L; 
+	if( time.current >  time.rx ) {
+		rxTimer.tick(); 
+		getRX(); 
+		rxTimer.tock();
+		time.rx = millis() + 120L; 
+	}
 
+	if( time.current > ( time.tx) ){
+		serialTimer.tick(); 
+		//printTimers(); 
+		sendAll();
+		serialTimer.tock(); 
+		time.tx = millis() + 103L; 
 	}
 
 	tickLEDs(); 
 
 	checkSerial();
 
-
 	if(interrupted){
 		Serial.println("Interrupted"); 
 		motors.kill();
 		while(interrupted){
 			amberLED.flash(500,500); 
-			// ledState = true;
-			// toggleLED();
-			// delay(100); 
-			// toggleLED();
-			// delay(100); 
-			// toggleLED();
-			// delay(100); 
-			// toggleLED();
-			// delay(600); 
 		}
 	}
 }
 
+void printTimers(){
+	Serial.println(); 
+	loopTimer.print(); 
+	sensorTimer.print(); 
+	motorTimer.print(); 
+	rxTimer.print(); 
+	serialTimer.print(); 
+}
+
+void getRX(){
+	//comms.sendPacket(sensors.c, sensors.a, sensors.g, motors.d, desired);
+	switch(errorState){
+		case NOERR:
+			if( !rx.updateRX( desired ) ) {
+				alertError( RXERR ); 
+			}
+			else {
+				motors.setKD( rx.getKD() );
+				motors.setKP( rx.getKP() );
+			}
+			break;
+		case RXERR:
+			//Serial.println("Case:RXERR");
+			if( rx.updateRX( desired ) ){
+				alertError(NOERR); 
+			}
+			break;
+		default:
+			Serial.println("Error missed"); 
+	}
+	//rx.send(); 
+	//sendAll();  
+}
+
 void interrupt(){
+
 	Serial.print("interrupt"); 
+
+
 	if(interruptedAt + 1000L < millis() ){
-		Serial.println(" yes");
-		interrupted = !interrupted; 
+		Serial.println(" accept");
+
+		rx.toggleSetKP(); 
+
+		// interrupted = !interrupted; 
 		interruptedAt = millis(); 
 	}
 	else {
@@ -263,4 +306,47 @@ void sendAll(){
 	comms.send( sensors.g );
 	motors.send( );
 	comms.send( desired );
+
+	calcTimers(); 
+	sendTimers();
+	sendRatios();  
+}
+
+void calcTimers(){
+	loopTimer.calc();
+	rxTimer.calc();
+	sensorTimer.calc();
+	serialTimer.calc();
+	motorTimer.calc();
+}
+
+void sendRatios(){
+
+	Serial.print("P");
+	Serial.print(","); 
+	Serial.print(loopTimer.ratio);
+	Serial.print(","); 
+	Serial.print(sensorTimer.ratio);
+	Serial.print(","); 
+	Serial.print(motorTimer.ratio);
+	Serial.print(","); 
+	Serial.print(rxTimer.ratio);
+	Serial.print(","); 
+	Serial.println(serialTimer.ratio);
+}
+
+void sendTimers(){
+
+	Serial.print("T");
+	Serial.print(","); 
+	Serial.print(loopTimer.last);
+	Serial.print(","); 
+	Serial.print(sensorTimer.last);
+	Serial.print(","); 
+	Serial.print(motorTimer.last);
+	Serial.print(","); 
+	Serial.print(rxTimer.last);
+	Serial.print(","); 
+	Serial.println(serialTimer.last);
+
 }

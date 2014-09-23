@@ -8,10 +8,10 @@
 #define C 2 // REAR RIGHT - circuit
 #define D 3 // REAR LEFT - circuit
 
-#define MOTOR_A_PIN 9
-#define MOTOR_B_PIN 5
-#define MOTOR_C_PIN 3
-#define MOTOR_D_PIN 10
+#define MOTOR_A_PIN 3
+#define MOTOR_B_PIN 10
+#define MOTOR_C_PIN 9
+#define MOTOR_D_PIN 5
 
 
 
@@ -25,9 +25,9 @@ Motors::Motors(){
 		correction[i] = 0.0f; 
 	}
 
-	KP = 0.1f;
+	KP = 0.9f;
   	KI = 0.00f;
- 	KD = - 0.1f;
+ 	KD = 0.0f;
 
 	d = (Data) {
 		{ 0.0f,0.0f,0.0f,0.0f},
@@ -35,6 +35,14 @@ Motors::Motors(){
 		{ 0.0f,0.0f,0.0f,0.0f},
 		{ 0.0f,0.0f,0.0f,0.0f}
 	};
+}
+
+void Motors::setKD( float kd ){
+	KD = kd; 
+}
+
+void Motors::setKP( float kp ){
+	KP = kp; 
 }
 
 void Motors::init(){
@@ -71,22 +79,22 @@ void Motors::init(){
 
 void Motors::update(Ctrl ctrl, int throttle, int errorState){
 	
-	d.p[A] = ( + ctrl.error[PITCH] 			+ ctrl.error[ROLL] 			) * KP;
+	d.p[A] = ( - ctrl.error[PITCH] 			- ctrl.error[ROLL] 			) * KP;
 	d.i[A] = ( + ctrl.error_integral[PITCH] + ctrl.error_integral[ROLL] ) * KI;
 	d.d[A] = ( - ctrl.rate[PITCH] 			+ ctrl.rate[ROLL] 			) * KD;
 	correction[A] = d.p[A] + d.i[A] + d.d[A]; // + YAW Corr
 	
-	d.p[B] = ( + ctrl.error[PITCH] 			- ctrl.error[ROLL] 			) * KP;
+	d.p[B] = ( - ctrl.error[PITCH] 			+ ctrl.error[ROLL] 			) * KP;
 	d.i[B] = ( + ctrl.error_integral[PITCH] - ctrl.error_integral[ROLL] ) * KI;
 	d.d[B] = ( - ctrl.rate[PITCH] 			- ctrl.rate[ROLL] 			) * KD;
 	correction[B] = d.p[B] + d.i[B] + d.d[B]; // + YAW Corr
 	
-	d.p[C] = ( - ctrl.error[PITCH] 			- ctrl.error[ROLL] 			) * KP;
+	d.p[C] = ( + ctrl.error[PITCH] 			+ ctrl.error[ROLL] 			) * KP;
 	d.i[C] = ( - ctrl.error_integral[PITCH] - ctrl.error_integral[ROLL] ) * KI;
 	d.d[C] = ( + ctrl.rate[PITCH] 			- ctrl.rate[ROLL] 			) * KD;
 	correction[C] = d.p[C] + d.i[C] + d.d[C]; // + YAW Corr
 
-	d.p[D] = ( - ctrl.error[PITCH] 			+ ctrl.error[ROLL] 			) * KP;
+	d.p[D] = ( + ctrl.error[PITCH] 			- ctrl.error[ROLL] 			) * KP;
 	d.i[D] = ( - ctrl.error_integral[PITCH] + ctrl.error_integral[ROLL] ) * KI;
 	d.d[D] = (  ctrl.rate[PITCH] 			+ ctrl.rate[ROLL] 			) * KD;
 	correction[D] = d.p[D] + d.i[D] + d.d[D]; // + YAW Corr
@@ -106,7 +114,7 @@ void Motors::twitch(){
 	Serial.println("Twitch"); 
 
 	for(int i=0; i<4; i++){
-		servos[i].write(20);
+		servos[i].write(0);
 	}
 	delay(3000); 
 
@@ -121,17 +129,17 @@ void Motors::twitch(){
 			servos[i].write(j); 
 			delay(33); 
 		}
-		servos[i].write(10);
-		delay(1000);
-		servos[i].write(179);
-		delay(300);
+		// servos[i].write(10);
+		// delay(1000);
+		// servos[i].write(179);
+		// delay(300);
 		servos[i].write(1); 
 		Serial.println(); 
 
 	}
 
 	for(int i=0; i<4; i++){
-		servos[i].write(25);
+		servos[i].write(0);
 	}
 	delay(5000); 
 
@@ -139,23 +147,27 @@ void Motors::twitch(){
 
 void Motors::set(int throttle){
 
-	bool calibrate = false; 
-	if(calibrate){
-		Serial.print("Calibrate ");
-		if(throttle > 100){
-			Serial.println(MOTOR_MAX); 
-			for(int i=0; i<4; i++){
-				servos[i].write( MOTOR_MAX ); 
-			}
-		}
-		else {
-			Serial.println(MOTOR_MIN); 
-			for(int i=0; i<4; i++){
-				servos[i].write( 12 ); 
-			}
-		}
-		return; 
-	}
+	// bool calibrate = false; 
+	// if(calibrate){
+	// 	Serial.print("Calibrate ");
+	// 	if(throttle > 100){
+	// 		Serial.println(MOTOR_MAX); 
+	// 		for(int i=0; i<4; i++){
+	// 			servos[i].write( MOTOR_MAX ); 
+	// 		}
+	// 	}
+	// 	else {
+	// 		Serial.println(MOTOR_MIN); 
+	// 		for(int i=0; i<4; i++){
+	// 			servos[i].write( 12 ); 
+	// 		}
+	// 	}
+	// 	return; 
+	// }
+
+	// int max = 0; 
+	// int mot = -1; 
+
 
 	if(throttle < MOTOR_MIN){
 		for(int i=0; i<4; i++){
@@ -165,10 +177,22 @@ void Motors::set(int throttle){
 	else {
 		for (int i = 0; i < 4; i++) {
 			command[i] = int( correction[i] ) + throttle;
+
+			// if(command[i]>max){
+			// 	max = command[i];
+			// 	mot = i; 
+			// }
+
 			if( command[i] > MOTOR_MAX) command[i] = MOTOR_MAX;
 			if( command[i] < MOTOR_MIN) command[i] = MOTOR_MIN;
-			//if( command[i] < MOTOR_MIN) command[i] = 0;
+			//if( command[i] < 100) command[i] = 0;
+			// else {
+			// 	Serial.println(); 
+			// }
 		}
+
+
+
 
 		for(int i=0; i<4; i++){
 			// Serial.print(command[i]);
@@ -178,7 +202,25 @@ void Motors::set(int throttle){
 		// Serial.println(); 
 	}
 
+	// switch(mot){
+	// 	case 0: 
+	// 		Serial.print("A"); 
+	// 		break;
+	// 	case 1: 
+	// 		Serial.print("B"); 
+	// 		break;
+	// 	case 2: 
+	// 		Serial.print("C"); 
+	// 		break;
+	// 	case 3: 
+	// 		Serial.print("D"); 
+	// 		break;
+	// 	}
+	// 	Serial.println(max); 
+
 }
+
+
 
 void Motors::send(){
 	char lab[] = {'a','b','c','d'};

@@ -10,9 +10,13 @@ class RX {
         RX(); 
         boolean updateRX(int *desired); 
         void send();
+        float getKD();
+        float getKP();
+        void toggleSetKP();
     private:
         boolean update4CH(int *desired);
         boolean update6CH(int *desired);
+        float map_coeff(int val, float minn, float maxx);
 
 };
 

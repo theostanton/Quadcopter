@@ -9,6 +9,11 @@
 #define AUX1_PIN 7
 #define AUX2_PIN 8
 
+
+volatile boolean setKP = false; 
+float KD = 0.05f;
+float KP = 0.05f;
+
 int RXtemp = 0;
 int RXnodeStart = 0;
 double RXnode[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -31,6 +36,14 @@ RX::RX(){
     pinMode(AUX1_PIN,INPUT); 
     pinMode(AUX2_PIN,INPUT); 
 
+}
+
+float RX::getKD(){
+    return KD;
+}
+
+float RX::getKP(){
+    return KP;
 }
 
 void RX::send(){
@@ -115,7 +128,7 @@ boolean RX::update6CH( int *desired ) {
     long strt = micros(); 
     while( digitalRead( PIN[0] ) == LOW ){
         if( micros() - strt > 100000L ){
-            Serial.println("RX Timeout PIN0");
+            //Serial.println("RX Timeout PIN0");
             return false; 
         }
     }
@@ -208,12 +221,25 @@ boolean RX::update6CH( int *desired ) {
     desired[PITCH] = rxdesired[rxPITCH];
     desired[YAW] = rxdesired[rxYAW];
 
-    // Serial.print(rawvalue[4]);
-    // Serial.print(" ");
-    // Serial.println(rawvalue[5]);
+    // KP = float(rawvalue[4] - 800 )  / 5000.0f; 
+    // KD = float(rawvalue[5] - 800 )  / 5000.0f; 
+
+    KP = map_coeff( rawvalue[4], 0.30f, 0.0f );
+    KD = map_coeff( rawvalue[5], 0.0f, 0.30f );
+
+    // Serial.print( KP );
     //Serial.println(); 
 
     return true; 
+}
+
+void RX::toggleSetKP(){
+    setKP = !setKP; 
+}
+
+float RX::map_coeff(int val, float minn, float maxx){
+    float v = (float)val;
+    return  ( v - 1000.0f ) * ( maxx -minn ) / ( 1000.0f ) + minn; 
 }
 
 boolean  RX::updateRX( int *desired ) { 
