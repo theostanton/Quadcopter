@@ -19,6 +19,7 @@ struct Gyro {
 };
 
 struct Ctrl { 
+      float yaw_lock; 
       float angle[3]; // send
       float error[3]; // send
       float des[3]; 
@@ -30,6 +31,7 @@ struct Data {
 		float p[4];
 		float i[4];
 		float d[4];
+            float y[4];
 		float t[4];
 };
 

@@ -4,6 +4,8 @@ int desired[] = {0, 0, 0, 0};
 
 // Conflicts with Servo.h #include <TimerOne.h>
 
+
+#include <MemoryFree.h>
 #include <Structs.h>
 #include <Servo.h>
 #include <Sensors.h>
@@ -16,12 +18,14 @@ int desired[] = {0, 0, 0, 0};
 LED amberLED(A2,"Amber"); 
 LED greenLED(A3,"Green"); 
 
-
+//#define TIMERS false
+#ifdef TIMERS
 Timer loopTimer("Loop",0); 
 Timer sensorTimer("Sensor",1); 
 Timer motorTimer("Motor",2); 
 Timer rxTimer("RX",3); 
 Timer serialTimer("Serial",4); 
+#endif
 
 Sensors sensors; 
 Motors motors; 
@@ -46,16 +50,20 @@ struct time {
   unsigned long previous;
   unsigned long tx;
   unsigned long rx;
-  unsigned long tick;
+  unsigned long tick;	
 }
 time = {0L, 0L, 0L, 0L, 0L, 0L, 0L}; 
 
+#define ERROR "ERR"
+#define COMMA '.'
 
 void setup() {
 
 
 	Serial.begin(115200); 
 	Serial.println("Start");
+	Serial.print("freeMemory()=");
+    Serial.println(freeMemory());
 
     amberLED.set(true); 
 	errorState=0;
@@ -66,11 +74,13 @@ void setup() {
 	greenLED.flash(100,1000,2); 
 	amberLED.stop(); 
 
+	#ifdef TIMERS
 	// rxTimer.setPrint(true); 
 	// serialTimer.setPrint(true); 
-	// sensorTimer.setPrint(true); 
-	// loopTimer.setPrint(true); 
+	sensorTimer.setPrint(true); 
+	loopTimer.setPrint(true); 
 	// serialTimer.setPrint(true); 
+	#endif
 
 	//motors.twitch(); 
 
@@ -82,7 +92,10 @@ void tickLEDs() {
 }
 
 void loop() {
+
+	#ifdef TIMERS
 	loopTimer.ticketytock(); 
+	#endif 
 
 	time.previousMicros = time.currentMicros;
 	time.currentMicros  = micros();
@@ -96,19 +109,29 @@ void loop() {
 	// 	Serial.println(DT); 
 	// 	acc = 0;
 	// }
-	// acc++; 
+	// acc++; q
 
 	// if time to RX
 	// updateRX(); 
 
+	#ifdef TIMERS
 	sensorTimer.tick();
-	success = sensors.read(DT, desired); 
+	#endif
+	success = sensors.read(DT, desired);
+
+	#ifdef TIMERS 
 	sensorTimer.tock(); 
+	#endif
 
 	if( success ) { 
+		#ifdef TIMERS
 		motorTimer.tick(); 
-		motors.update( sensors.c, desired[THROTTLE], errorState ); 
+		#endif
+		motors.update( sensors.c, desired[THROTTLE], errorState, (float)desired[YAW] ); 
+		
+		#ifdef TIMERS
 		motorTimer.tock(); 
+		#endif
 	}
 	else {
 		Serial.println("Sensor error"); 
@@ -116,17 +139,30 @@ void loop() {
 	}
 
 	if( time.current >  time.rx ) {
+		#ifdef TIMERS
 		rxTimer.tick(); 
+		#endif
 		getRX(); 
+		#ifdef TIMERS
 		rxTimer.tock();
+		#endif
 		time.rx = millis() + 120L; 
 	}
 
 	if( time.current > ( time.tx) ){
+		#ifdef TIMERS
 		serialTimer.tick(); 
+		#endif
+
 		//printTimers(); 
-		sendAll();
+		//sendAll();
+		motors.print();
+		//sensors.print(); 
+		
+		#ifdef TIMERS
 		serialTimer.tock(); 
+		#endif
+
 		time.tx = millis() + 103L; 
 	}
 
@@ -135,7 +171,7 @@ void loop() {
 	checkSerial();
 
 	if(interrupted){
-		Serial.println("Interrupted"); 
+		Serial.println("INT"); 
 		motors.kill();
 		while(interrupted){
 			amberLED.flash(500,500); 
@@ -143,14 +179,14 @@ void loop() {
 	}
 }
 
-void printTimers(){
-	Serial.println(); 
-	loopTimer.print(); 
-	sensorTimer.print(); 
-	motorTimer.print(); 
-	rxTimer.print(); 
-	serialTimer.print(); 
-}
+// void printTimers(){
+// 	Serial.println(); 
+// 	loopTimer.print(); 
+// 	sensorTimer.print(); 
+// 	motorTimer.print(); 
+// 	rxTimer.print(); 
+// 	serialTimer.print(); 
+// }
 
 void getRX(){
 	//comms.sendPacket(sensors.c, sensors.a, sensors.g, motors.d, desired);
@@ -160,8 +196,8 @@ void getRX(){
 				alertError( RXERR ); 
 			}
 			else {
-				motors.setKD( rx.getKD() );
-				motors.setKP( rx.getKP() );
+				motors.setKP( rx.getAUX1() );
+				motors.setKD( rx.getAUX2() );
 			}
 			break;
 		case RXERR:
@@ -171,19 +207,22 @@ void getRX(){
 			}
 			break;
 		default:
-			Serial.println("Error missed"); 
+			Serial.println(ERROR); 
 	}
+	Serial.print("freeMemory()=");
+    Serial.println(freeMemory());
+	//addToConsole(line, true);
 	//rx.send(); 
 	//sendAll();  
 }
 
 void interrupt(){
 
-	Serial.print("interrupt"); 
+	Serial.print("INT"); 
 
 
 	if(interruptedAt + 1000L < millis() ){
-		Serial.println(" accept");
+		Serial.println(" ed");
 
 		rx.toggleSetKP(); 
 
@@ -191,26 +230,27 @@ void interrupt(){
 		interruptedAt = millis(); 
 	}
 	else {
-		Serial.println(" bounced");
+		Serial.println(" bounce");
 	}
 }
 
 void alertError(int error){
 	switch(error){
 		case NOERR:
-			Serial.println("Exit error"); 
+			Serial.println("End"); 
 			amberLED.stop();
 			greenLED.flash(2); 
 			errorState = NOERR;
 			return;
 		case RXERR:
-			Serial.println("RX ERR"); 
+			Serial.print("RX");
+			Serial.println(ERROR); 
 			amberLED.flash(500,1000);
 			greenLED.stop(); 
 			errorState = RXERR;
 			return; 
 		default:
-			Serial.println("Other error");
+			Serial.println(ERROR);
 			amberLED.flash(2);
 			greenLED.stop(); 
 			errorState = 3; 
@@ -291,7 +331,7 @@ void checkSerial(){
 				break; 
 
 			default :
-				Serial.println(" Something else ");
+				Serial.println(ERROR);
 				Serial.println(String("a " + a)); 
 				Serial.println(String("in " + in) ); 
 		}
@@ -310,43 +350,51 @@ void sendAll(){
 	calcTimers(); 
 	sendTimers();
 	sendRatios();  
+
+	Serial.println("!"); 
 }
 
 void calcTimers(){
+	#ifdef TIMERS
 	loopTimer.calc();
 	rxTimer.calc();
 	sensorTimer.calc();
 	serialTimer.calc();
 	motorTimer.calc();
+	#endif
 }
 
 void sendRatios(){
+	#ifdef TIMERS
 
 	Serial.print("P");
-	Serial.print(","); 
+	Serial.print(COMMA); 
 	Serial.print(loopTimer.ratio);
-	Serial.print(","); 
+	Serial.print(COMMA); 
 	Serial.print(sensorTimer.ratio);
-	Serial.print(","); 
+	Serial.print(COMMA); 
 	Serial.print(motorTimer.ratio);
-	Serial.print(","); 
+	Serial.print(COMMA); 
 	Serial.print(rxTimer.ratio);
-	Serial.print(","); 
+	Serial.print(COMMA); 
 	Serial.println(serialTimer.ratio);
+	#endif
 }
 
 void sendTimers(){
 
+	#ifdef TIMERS
 	Serial.print("T");
-	Serial.print(","); 
+	Serial.print(COMMA); 
 	Serial.print(loopTimer.last);
-	Serial.print(","); 
+	Serial.print(COMMA); 
 	Serial.print(sensorTimer.last);
-	Serial.print(","); 
+	Serial.print(COMMA); 
 	Serial.print(motorTimer.last);
-	Serial.print(","); 
+	Serial.print(COMMA); 
 	Serial.print(rxTimer.last);
-	Serial.print(","); 
+	Serial.print(COMMA); 
 	Serial.println(serialTimer.last);
+	#endif
 
 }

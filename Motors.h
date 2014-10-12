@@ -11,7 +11,7 @@ class Motors {
 	public:
 		Motors();
 		void init(); 
-		void update(Ctrl ctrl,int throttle,int errorState); 
+		void update(Ctrl ctrl,int throttle,int errorState, float rxYaw); 
 		void kill();
 		void print(); 
 		void send(); 
@@ -20,10 +20,15 @@ class Motors {
 		void setKD( float kd );
 		void setKP( float kp );
 
+		void setYD( float yd );
+		void setYP( float yp );
+
 		int command[4];
 		float KP;
 		float KI;
 		float KD;
+		float YP;
+		float YD;
 		Data d; 
 
 	private:

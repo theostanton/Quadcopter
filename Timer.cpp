@@ -1,6 +1,9 @@
 #include "Arduino.h"
 #include "Timer.h"
 
+#define MS "ms "
+#define US "us "
+
 Timer::Timer(char *labell, int idd){
 	label = labell; 
 	id = idd; 
@@ -14,6 +17,9 @@ Timer::Timer(char *labell, int idd){
 
 	min = 100000L; 
 	max = 0L; 
+
+	// Serial.print("Created timer ");
+	// Serial.println(label); 
 }
 
 void Timer::tick(){
@@ -56,19 +62,19 @@ void Timer::print(){
 
 	if( last > 5000L ){
 		Serial.print(last/1000L);
-		Serial.print("ms ");
+		Serial.print(MS);
 		Serial.print(min/1000L);
-		Serial.print("ms ");
+		Serial.print(MS);
 		Serial.print(max/1000L);
-		Serial.print("ms");
+		Serial.print(MS);
 	}
 	else{
 		Serial.print( last);
-		Serial.print("us "); 
+		Serial.print(US); 
 		Serial.print(min);
-		Serial.print("us "); 
+		Serial.print(US); 
 		Serial.print(max);
-		Serial.print("us"); 
+		Serial.print(US); 
 	}
 	Serial.print(" ");
 	Serial.println(ratio); 

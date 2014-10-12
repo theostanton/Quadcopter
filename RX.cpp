@@ -2,17 +2,24 @@
 #include "RX.h"
 #include "Structs.h"
 
-#define ROLL_PIN 11
-#define THROTTLE_PIN 4
-#define PITCH_PIN 12 
+// #define ROLL_PIN 11
+// #define THROTTLE_PIN 4
+// #define PITCH_PIN 12 
+// #define YAW_PIN 6
+// #define AUX1_PIN 7
+// #define AUX2_PIN 8
+
+#define ROLL_PIN 12
+#define THROTTLE_PIN 8
+#define PITCH_PIN 7 
 #define YAW_PIN 6
-#define AUX1_PIN 7
-#define AUX2_PIN 8
+#define AUX1_PIN 11
+#define AUX2_PIN 4
 
 
 volatile boolean setKP = false; 
-float KD = 0.05f;
-float KP = 0.05f;
+float fAUX1 = 0.05f;
+float fAUX2 = 0.05f;
 
 int RXtemp = 0;
 int RXnodeStart = 0;
@@ -20,13 +27,13 @@ double RXnode[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 int rawvalue[6]  = { 0, 0, 0, 0, 0, 0 }; 
 int auxcount = 0; 
 
-const int minimum[6] = { 1000, 1045, 1000, 1040, 1000, 1000};
-const int maximum[6] = { 1900, 1835, 1900, 1800, 1900, 1900};
-const int minDesired[4] = { 45, 0, -45, 10 };
-const int maxDesired[4] = { -45, MOTOR_MAX, 45, -10 };
+const int minimum[6] = { 1060, 1060, 1060, 1060, 1060, 1060};
+const int maximum[6] = { 1880, 1880, 1880, 1880, 1880, 1880};
+const int minDesired[4] = { 45, 0, -45, 20 };
+const int maxDesired[4] = { -45, MOTOR_MAX, 45, -20 };
 const int PIN[6] = { ROLL_PIN, THROTTLE_PIN, PITCH_PIN, YAW_PIN, AUX1_PIN, AUX2_PIN};
 
-int rxdesired[6] = { 0,0,0,0,0,0 };
+float rxdesired[6] = { 0,0,0,0,0,0 };
 
 RX::RX(){
     pinMode(ROLL_PIN,INPUT); 
@@ -38,12 +45,12 @@ RX::RX(){
 
 }
 
-float RX::getKD(){
-    return KD;
+float RX::getAUX1(){
+    return fAUX1;
 }
 
-float RX::getKP(){
-    return KP;
+float RX::getAUX2(){
+    return fAUX2;
 }
 
 void RX::send(){
@@ -61,7 +68,7 @@ boolean RX::update4CH( int *desired ) {
     long strt = micros(); 
     while( digitalRead( PIN[0] ) == LOW ){
         if( micros() - strt > 20000L ){
-            Serial.println("RX Timeout");
+            Serial.println("RXTO");
             return false; 
         }
     }
@@ -111,6 +118,7 @@ boolean RX::update4CH( int *desired ) {
     desired[PITCH] = rxdesired[rxPITCH];
     desired[YAW] = rxdesired[rxYAW];
 
+
     return true; }
 
 boolean RX::update6CH( int *desired ) {
@@ -121,7 +129,7 @@ boolean RX::update6CH( int *desired ) {
     // if CH1 already high then wait WHOLE sequence.   
     // TODO: sync!
     if( digitalRead( PIN[0] ) == HIGH ){
-        Serial.println("HIGH"); 
+        Serial.println("HI"); 
         return true; 
     }
 
@@ -141,7 +149,7 @@ boolean RX::update6CH( int *desired ) {
     
     while( digitalRead( PIN[2] ) == LOW ){
         if( micros() - strt > 100000L ){
-            Serial.println("RX Timeout PIN2");
+            Serial.println("RXTO2");
             return false; 
         }
     }
@@ -149,7 +157,7 @@ boolean RX::update6CH( int *desired ) {
     //Serial.println(RXnode[1]);
     while( digitalRead( PIN[1] ) == LOW ){
         if( micros() - strt > 1000000L ){
-            Serial.println("RX Timeout PIN1");
+            Serial.println("RXTO1");
             return false; 
         }
     }
@@ -160,7 +168,7 @@ boolean RX::update6CH( int *desired ) {
 
     while( digitalRead( PIN[3] ) == LOW ){
         if( micros() - strt > 100000L ){
-            Serial.println("RX Timeout PIN3");
+            Serial.println("RXTO3");
             return false; 
         }
     }
@@ -169,7 +177,7 @@ boolean RX::update6CH( int *desired ) {
 
     while( digitalRead( PIN[4] ) == LOW ){
         if( micros() - strt > 100000L ){
-            Serial.println("RX Timeout PIN4");
+            Serial.println("RXTO4");
             return false; 
         }
     }
@@ -177,7 +185,7 @@ boolean RX::update6CH( int *desired ) {
 
     while( digitalRead( PIN[5] ) == LOW ){
         if( micros() - strt > 100000L ){
-            Serial.println("RX Timeout PIN5");
+            Serial.println("RXTO5");
             return false; 
         }
     }
@@ -194,11 +202,14 @@ boolean RX::update6CH( int *desired ) {
     for(int i=0; i<6; i++){
         if(RXnode[i+1] - RXnode[i] > 950){
             rawvalue[i] = RXnode[i+1] - RXnode[i];
+            // Serial.print(rawvalue[i]);
+            // Serial.print(" "); 
             // if(i==4){
             //     rawvalue[i] -= 1500;
             // }
         }
     }
+    // Serial.println(); 
    
     // rawvalue[0] = RXnode[1] - RXnode[0];
     // rawvalue[1] = RXnode[2] - RXnode[1];
@@ -216,16 +227,36 @@ boolean RX::update6CH( int *desired ) {
       }
     }
 
-    if(!missed)  desired[ROLL] = rxdesired[rxROLL];
+    desired[ROLL] = abs(rxdesired[rxROLL]) > 2 ? rxdesired[rxROLL] : 0;
+    desired[PITCH] = abs(rxdesired[rxPITCH]) > 2 ? rxdesired[rxPITCH] : 0;
+    desired[YAW] = abs(rxdesired[rxYAW]) > 2 ? rxdesired[rxYAW] : 0;
     desired[THROTTLE] = rxdesired[rxTHROTTLE];
-    desired[PITCH] = rxdesired[rxPITCH];
-    desired[YAW] = rxdesired[rxYAW];
+    // desired[PITCH] = rxdesired[rxPITCH];
+    // desired[YAW] = rxdesired[rxYAW];
+
+    // for(int i=0; i<4; i++){
+    //     Serial.print(" ");
+    //     Serial.print(rxdesired[i]); 
+    // }
+    // for(int i=0; i<4; i++){
+    //     Serial.print(" ");
+    //     Serial.print(desired[i]); 
+    // }
+    // Serial.println(); 
+
+    // Serial.print(desired[THROTTLE]); 
+    // Serial.print(" ");
+    // Serial.print(desired[PITCH]); 
+    // Serial.print(" ");
+    // Serial.print(desired[ROLL]); 
+    // Serial.print(" ");
+    // Serial.println(desired[YAW]); 
 
     // KP = float(rawvalue[4] - 800 )  / 5000.0f; 
     // KD = float(rawvalue[5] - 800 )  / 5000.0f; 
 
-    KP = map_coeff( rawvalue[4], 0.30f, 0.0f );
-    KD = map_coeff( rawvalue[5], 0.0f, 0.30f );
+    fAUX1 = map_coeff( rawvalue[4], 0.3f, 0.0f );
+    fAUX2 = map_coeff( rawvalue[5], 0.0f, 0.2f );
 
     // Serial.print( KP );
     //Serial.println(); 

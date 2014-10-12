@@ -2,9 +2,19 @@
 #include "Sensors.h"
 
 #include <Wire.h>
-#include <LSM303.h>
+#include "LSM303.h"
+#include "Timer.h"
+
+//##define TIMERS false
 
 LSM303 compass; 
+
+#ifdef TIMERS
+Timer magTimer("Mag",5);
+Timer accTimer("Acc",6);
+Timer gyroTimer("Gyro",7);
+#endif
+// Timer ctrlTimer("Err",8);
 
 #define RATIO 0.9
 
@@ -26,6 +36,12 @@ LSM303 compass;
 Sensors::Sensors(){
     Wire.begin();
 
+    #ifdef TIMERS
+    magTimer.setPrint(true);
+    accTimer.setPrint(true);
+    gyroTimer.setPrint(true);
+    #endif
+
     a = (Accel){ 
     	{ 0.0, 0.0, 0.0 }, 
     	{ 0.0, 0.0, 0.0 },
@@ -41,6 +57,7 @@ Sensors::Sensors(){
     };
 
     c = (Ctrl){ 
+      0.0f,
     	{ 0.0f, 0.0f, 0.0f }, 
       { 0.0f, 0.0f, 0.0f },
       { 0.0f, 0.0f, 0.0f },
@@ -50,26 +67,68 @@ Sensors::Sensors(){
 }
 
 void Sensors::init(){
-  Serial.print("Sensors init ...");
-	Serial.println("setupAccel"); 
+  //Serial.print("Sensors init ...");
+	//Serial.println("setupAccel"); 
 	setupAccel(); 
-	Serial.println("setupGyor"); 
+	//Serial.println("setupGyor"); 
 	setupGyro(); 
-	Serial.println("Done"); 
+	//Serial.println("Done"); 
 }
 
 boolean Sensors::read(float DT, int *desired){
 
+  #ifdef TIMERS 
+  magTimer.tick(); 
+  #endif
   float DTsec = DT / 1000000.0f;
 
-	// Accel 
 
-	compass.readAcc();
+  // yaw 
+  //compass.readMag(); 
+
 
   if( compass.timeoutOccurred() ) {
-    Serial.println("I2C timeout");
+    Serial.println("TO");
     return false; 
   }
+
+  c.angle[YAW] = (float)compass.heading(); 
+
+  #ifdef TIMERS 
+  magTimer.tock(); 
+  #endif
+  //Serial.println(desired[YAW]); 
+
+  // if( abs(desired[YAW] ) > 2 ){
+  //   c.yaw_lock = c.angle[YAW] + desired[YAW];
+  //   if(c.yaw_lock > 359){
+  //     c.yaw_lock -= 360;
+  //   }
+  //   else if(c.yaw_lock < 0){
+  //     c.yaw_lock += 360; 
+  //   }
+  //   c.error[YAW] = desired[YAW]; 
+  // }
+  // else {
+  //   c.error[YAW] = c.yaw_lock - c.angle[YAW]; 
+  //   if(c.error[YAW] > 180.0f){
+  //     c.error[YAW] -= 360.0f;
+  //   }
+  //   else if(c.error[YAW] < -180.0f){
+  //     c.error[YAW] += 360.0f; 
+  //   }
+  // }
+
+
+
+  #ifdef TIMERS 
+  accTimer.tick(); 
+  // Accel 
+	compass.readAcc();
+  #endif
+
+
+
 
 	a.angle[ROLL]   = atan2( (float)compass.a.x * ACCGAIN , sqrt( ACCGAINSQ * ( sq( (float)compass.a.y ) + sq( (float)compass.a.z ) ) ) ) ; 
   a.angle[PITCH]  = atan2( (float)compass.a.y * ACCGAIN , sqrt( ACCGAINSQ * ( sq( (float)compass.a.z ) + sq( (float)compass.a.x ) ) ) ) ;
@@ -88,6 +147,10 @@ boolean Sensors::read(float DT, int *desired){
 	a.prev[ROLL]  = a.angle[ROLL];
 	a.prev[PITCH] = a.angle[PITCH];
 
+  #ifdef TIMERS
+  accTimer.tock(); 
+  gyroTimer.tick(); 
+  #endif
   	// Gyro 
 
   byte gyroxMSB   = readRegister(L3G4200D_Address, 0x29);
@@ -107,6 +170,9 @@ boolean Sensors::read(float DT, int *desired){
 	g.rate[ROLL]  = g.raw[ROLL] / GYROGAIN;
 	g.angle[ROLL] = c.angle[ROLL] + g.rate[PITCH] * DTsec;
 
+  #ifdef TIMERS 
+  gyroTimer.tock(); 
+  #endif
 
 	// Error
 	c.angle[PITCH]  = g.angle[PITCH]  * RATIO + a.angle[PITCH]  * ( 1.0 - RATIO );
@@ -127,20 +193,30 @@ boolean Sensors::read(float DT, int *desired){
 }
 
 void Sensors::print(){
-	Serial.print( a.angle[ROLL] );
-	Serial.print(" ");
-	Serial.print( a.angle[PITCH] );
-  Serial.print(" ");
-  Serial.print( a.angle[YAW] );
-	Serial.print(" "); 
-	Serial.print( g.angle[ROLL] );
-	Serial.print(" ");
-	Serial.print( g.angle[PITCH] );
-	Serial.print(" "); 
-	Serial.print( c.angle[ROLL] );
-	Serial.print(" ");
-	Serial.print( c.angle[PITCH] );
-	Serial.println(); 
+
+
+  // Serial.print( desired[YAW] ); 
+  // Serial.print(" "); 
+  Serial.print( c.angle[YAW] ); 
+  Serial.print(" "); 
+  Serial.print( c.yaw_lock ); 
+  Serial.print(" "); 
+  Serial.println(c.error[YAW]); 
+
+	// Serial.print( a.angle[ROLL] );
+	// Serial.print(" ");
+	// Serial.print( a.angle[PITCH] );
+ //  Serial.print(" ");
+ //  Serial.print( a.angle[YAW] );
+	// Serial.print(" "); 
+	// Serial.print( g.angle[ROLL] );
+	// Serial.print(" ");
+	// Serial.print( g.angle[PITCH] );
+	// Serial.print(" "); 
+	// Serial.print( c.angle[ROLL] );
+	// Serial.print(" ");
+	// Serial.print( c.angle[PITCH] );
+	// Serial.println(); 
 }
 
 void Sensors::setupAccel(){
@@ -148,12 +224,26 @@ void Sensors::setupAccel(){
     compass.enableDefault();
     compass.setTimeout(100);
 
-    Serial.print( "timeout : ");
+    Serial.print( "TO: ");
     Serial.println(compass.getTimeout());
 
     delay(500); //wait for the sensor to be ready WAS 1500
     compass.m_min.x = -715; compass.m_min.y = -531; compass.m_min.z = -654;
     compass.m_max.x = +346; compass.m_max.y = +519; compass.m_max.z = +389;
+
+
+    compass.readMag(); 
+
+
+    if( compass.timeoutOccurred() ) {
+      Serial.println("TO");
+      return; 
+    }
+  
+    c.yaw_lock = (float)compass.heading(); 
+
+    Serial.print("yaw:"); 
+    Serial.println(c.yaw_lock ); 
 }
 
 void Sensors::setupGyro(){

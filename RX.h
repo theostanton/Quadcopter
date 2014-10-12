@@ -10,8 +10,8 @@ class RX {
         RX(); 
         boolean updateRX(int *desired); 
         void send();
-        float getKD();
-        float getKP();
+        float getAUX1();
+        float getAUX2();
         void toggleSetKP();
     private:
         boolean update4CH(int *desired);
